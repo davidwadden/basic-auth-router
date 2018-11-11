@@ -106,5 +106,4 @@ modules.xml
 
 ### Custom ###
 
-/auth-router
-/routeserver/vendor/
+/basic-auth-router

@@ -11,10 +11,10 @@ import (
 )
 
 const (
-	DEFAULT_PORT     = "8080"
-	CF_FORWARDED_URL = "X-Cf-Forwarded-Url"
-	DEFAULT_USERNAME = "admin"
-	DEFAULT_PASSWORD = "letmein"
+	DefaultPort     = "8080"
+	CFForwardedUrl  = "X-Cf-Forwarded-Url"
+	DefaultUsername = "user"
+	DefaultPassword = "password"
 )
 
 var c *config
@@ -38,17 +38,18 @@ func main() {
 
 func configFromEnvironmentVariables() *config {
 	conf := &config{
-		username: getEnv("basicauth_username", DEFAULT_USERNAME),
-		password: getEnv("basicauth_password", DEFAULT_PASSWORD),
+		username: getEnv("BASIC_AUTH_USERNAME", DefaultUsername),
+		password: getEnv("BASIC_AUTH_PASSWORD", DefaultPassword),
 		port:     getPort(),
 	}
+
 	return conf
 }
 
 func newProxy() http.Handler {
 	proxy := &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
-			forwardedURL := req.Header.Get(CF_FORWARDED_URL)
+			forwardedURL := req.Header.Get(CFForwardedUrl)
 			url, err := url.Parse(forwardedURL)
 			if err != nil {
 				log.Fatalln(err.Error())
@@ -60,7 +61,7 @@ func newProxy() http.Handler {
 			logger.RegisterSink(lager.NewWriterSink(os.Stdout, lager.DEBUG))
 
 			logger.Debug("X-Cf-Forwarded-URL", lager.Data{
-				"X-Cf-Forwarded-Url": req.Header.Get(CF_FORWARDED_URL),
+				"X-Cf-Forwarded-Url": req.Header.Get(CFForwardedUrl),
 			})
 
 			logger.Debug("X-CF-Proxy-Signature", lager.Data{
@@ -79,7 +80,7 @@ func newProxy() http.Handler {
 func getPort() string {
 	var port string
 	if port = os.Getenv("PORT"); len(port) == 0 {
-		port = DEFAULT_PORT
+		port = DefaultPort
 	}
 	return port
 }
@@ -89,19 +90,38 @@ func getEnv(env string, defaultValue string) string {
 		v string
 	)
 	if v = os.Getenv(env); len(v) == 0 {
-		log.Printf("using default value for %v", env)
+		log.Printf("using default: %v=%v", env, defaultValue)
 		return defaultValue
 	}
 
-	return env
+	log.Printf("using environment: %v=%v", env, v)
+	return v
 }
 func wrapper(h http.Handler) http.Handler {
+	logger := lager.NewLogger("wrapper")
+	logger.RegisterSink(lager.NewWriterSink(os.Stdout, lager.DEBUG))
+
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+
 		if (len(c.username) > 0) && (len(c.password) > 0) && !auth(r, c.username, c.password) {
+			username, password, ok := r.BasicAuth()
+			logger.Debug("UnauthorizedRequest", lager.Data{
+				"username": username,
+				"password": password,
+				"ok":       ok,
+			})
+
 			w.Header().Set("WWW-Authenticate", `Basic realm="REALM"`)
 			http.Error(w, http.StatusText(http.StatusUnauthorized), http.StatusUnauthorized)
 			return
 		}
+
+		username, password, ok := r.BasicAuth()
+		logger.Debug("AuthenticatedRequest", lager.Data{
+			"username": username,
+			"password": password,
+			"ok":       ok,
+		})
 		h.ServeHTTP(w, r)
 	})
 }
