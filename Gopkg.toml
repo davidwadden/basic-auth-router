@@ -44,3 +44,7 @@
 [prune]
   go-tests = true
   unused-packages = true
+
+[[constraint]]
+  name = "code.cloudfoundry.org/lager"
+  version = "2.0.0"

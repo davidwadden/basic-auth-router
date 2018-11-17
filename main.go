@@ -1,13 +1,16 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 
-	"github.com/pivotal-golang/lager"
+	"code.cloudfoundry.org/lager"
+	"code.cloudfoundry.org/lager/lagerflags"
 )
 
 const (
@@ -26,10 +29,30 @@ type config struct {
 }
 
 func main() {
+	lagerflags.AddFlags(flag.CommandLine)
 
-	logger := lager.NewLogger("p-basic-auth-router")
-	logger.RegisterSink(lager.NewWriterSink(os.Stdout, lager.DEBUG))
+	flag.Parse()
+
+	//logger := lager.NewLogger("p-basic-auth-router")
+	logger, reconfigurableSink := lagerflags.New("p-basic-auth-router")
+	logger.Info("starting")
+
+	logger.RegisterSink(lager.NewWriterSink(os.Stdout, reconfigurableSink.GetMinLevel()))
 	logger.RegisterSink(lager.NewWriterSink(os.Stderr, lager.ERROR))
+
+	// Display the current minimum log level
+	fmt.Printf("Current log level is ")
+	switch reconfigurableSink.GetMinLevel() {
+	case lager.DEBUG:
+		fmt.Println("debug")
+	case lager.INFO:
+		fmt.Println("info")
+	case lager.ERROR:
+		fmt.Println("error")
+	case lager.FATAL:
+		fmt.Println("fatal")
+	}
+
 	c = configFromEnvironmentVariables()
 
 	http.Handle("/", wrapper(newProxy()))
@@ -47,6 +70,9 @@ func configFromEnvironmentVariables() *config {
 }
 
 func newProxy() http.Handler {
+	logger, reconfigurableSink := lagerflags.New("p-basic-auth-router.new-proxy")
+	logger.RegisterSink(lager.NewWriterSink(os.Stdout, reconfigurableSink.GetMinLevel()))
+
 	proxy := &httputil.ReverseProxy{
 		Director: func(req *http.Request) {
 			forwardedURL := req.Header.Get(CFForwardedUrl)
@@ -57,8 +83,6 @@ func newProxy() http.Handler {
 
 			req.URL = url
 			req.Host = url.Host
-			logger := lager.NewLogger("proxy")
-			logger.RegisterSink(lager.NewWriterSink(os.Stdout, lager.DEBUG))
 
 			logger.Debug("X-Cf-Forwarded-URL", lager.Data{
 				"X-Cf-Forwarded-Url": req.Header.Get(CFForwardedUrl),
@@ -97,9 +121,10 @@ func getEnv(env string, defaultValue string) string {
 	log.Printf("using environment: %v=%v", env, v)
 	return v
 }
+
 func wrapper(h http.Handler) http.Handler {
-	logger := lager.NewLogger("wrapper")
-	logger.RegisterSink(lager.NewWriterSink(os.Stdout, lager.DEBUG))
+	logger, reconfigurableSink := lagerflags.New("p-basic-auth-router.wrapper")
+	logger.RegisterSink(lager.NewWriterSink(os.Stdout, reconfigurableSink.GetMinLevel()))
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 

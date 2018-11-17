@@ -2,6 +2,17 @@
 
 
 [[projects]]
+  digest = "1:af047afbfde6f25995bbfad5e2dbfdef5daac05d9559748ad122965672192308"
+  name = "code.cloudfoundry.org/lager"
+  packages = [
+    ".",
+    "lagerflags",
+  ]
+  pruneopts = "UT"
+  revision = "b152b7147a2a0154109a5194fcc7f4a933283abb"
+  version = "v2.0.0"
+
+[[projects]]
   branch = "master"
   digest = "1:1d3f9114fc967b1311e1d9e9e43ae681c885e5abbab6af7bd6bb8f278ca14acb"
   name = "github.com/benlaplanche/cf-basic-auth-route-service"
@@ -92,13 +103,6 @@
   version = "v3.0.1"
 
 [[projects]]
-  digest = "1:8c1543258fb59bc09ad7e02c6754bd5179070d4e664e1c5e372e5fdb86895387"
-  name = "github.com/pivotal-golang/lager"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "7639e31ce6622c55c15aa64144b85d5f4873d127"
-
-[[projects]]
   branch = "master"
   digest = "1:5193d913046443e59093d66a97a40c51f4a5ea4ceba60f3b3ecf89694de5d16f"
   name = "golang.org/x/net"
@@ -171,13 +175,14 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "code.cloudfoundry.org/lager",
+    "code.cloudfoundry.org/lager/lagerflags",
     "github.com/benlaplanche/cf-basic-auth-route-service/routeserver/proxy",
     "github.com/benlaplanche/cf-basic-auth-route-service/routeserver/utils",
     "github.com/onsi/ginkgo",
     "github.com/onsi/gomega",
     "github.com/onsi/gomega/ghttp",
     "github.com/pivotal-cf/brokerapi/auth",
-    "github.com/pivotal-golang/lager",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1
